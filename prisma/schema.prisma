@@ -1,0 +1,99 @@
+// Prisma schema para SQLite (sem enums)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  password       String
+  role           String    @default("USER") // "ADMIN" ou "USER"
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  budgets        Budget[]
+  invoices       Invoice[]
+  kanbanBoards   KanbanBoard[]
+}
+
+model Budget {
+  id             String    @id @default(uuid())
+  serviceNumber  String    @unique
+  clientName     String
+  clientEmail    String?
+  clientPhone    String?
+  company        String?
+  status         String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "COMPLETED", "CANCELED"
+  totalAmount    Float
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  items          BudgetItem[]
+  invoice        Invoice?
+  kanbanCards    KanbanCard[]
+}
+
+model BudgetItem {
+  id          String    @id @default(uuid())
+  description String
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+  imageUrl    String?
+  budgetId    String
+  budget      Budget    @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id           String    @id @default(uuid())
+  invoiceNumber String    @unique
+  issueDate     DateTime  @default(now())
+  dueDate       DateTime
+  paymentStatus String    @default("PENDING") // "PENDING", "PAID", "OVERDUE", "CANCELED"
+  totalAmount   Float
+  notes         String?
+  budgetId      String    @unique
+  budget        Budget    @relation(fields: [budgetId], references: [id])
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model KanbanBoard {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  columns     KanbanColumn[]
+}
+
+model KanbanColumn {
+  id           String      @id @default(uuid())
+  title        String
+  order        Int
+  boardId      String
+  board        KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards        KanbanCard[]
+}
+
+model KanbanCard {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  order       Int
+  dueDate     DateTime?
+  imageUrl    String?
+  columnId    String
+  column      KanbanColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  budgetId    String?
+  budget      Budget?     @relation(fields: [budgetId], references: [id])
+}
